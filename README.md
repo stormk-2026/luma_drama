@@ -1,37 +1,19 @@
 # LumaDrama
 
-A Flutter prototype for browsing and watching short dramas. It is a portfolio demo with local sample data and no payment or public comment service.
+LumaDrama 是一个使用 Flutter 开发的短剧播放 App 原型，面向海外用户，重点探索沉浸式刷剧、找剧和连续观看的移动端体验。目前作为个人作品展示，采用免费演示内容。
 
-## Current features
+## 主要功能
 
-- Home feed with vertical swipe between demo shows, horizontal swipe between categories, a quick drawer, and a compact seek bar.
-- Series detail and episode playback; one playback session owns the active video player.
-- Discover and My tabs stay on the same root route. Watch progress, saves, likes, and demo comments are stored locally.
-- English and Simplified Chinese interface. Landscape fullscreen on Android and iOS; Android picture in picture uses the system API. iOS picture in picture is not implemented.
-- One local video is reused for the demo shows and episodes. The catalog is sample data, not a library of real episodes.
+- **沉浸式首页**：竖屏播放，上下滑切换短剧，左右滑切换内容类别；支持拖动进度、横屏全屏观看。
+- **剧集播放**：从详情页进入后按集连续播放，支持选集和本地续看。
+- **找剧与个人页**：浏览、搜索和查看剧集详情；在个人页查看观看记录、收藏与喜欢的内容。
+- **互动与多语言**：本地演示评论、系统分享，以及英文和简体中文界面。
+- **画中画**：Android 接入系统画中画；iOS 画中画尚未实现。
 
-## Local media setup
+## 技术实现
 
-Drama artwork and video are **not included in this public repository**. Use your own media that you have permission to use, and place files at these paths before running or building:
+项目使用 Flutter、Provider 和 `video_player`。播放会话统一管理播放器生命周期；观看进度和演示互动数据保存在本机。首页、找剧、我的共用同一个根页面，切换时保留页面状态。
 
-```text
-assets/media/demo_clip.mp4
-assets/images/demo_poster.jpg
-assets/images/stitch_signal_poster_clean.png
-assets/images/stitch_city_poster_clean.png
-assets/images/stitch_vengeance_poster_clean.png
-assets/images/stitch_rain_scene.jpg
-```
+## 当前说明
 
-The paths are declared in `pubspec.yaml`; Flutter builds need all six files. The bundled catalog currently points every playable episode to `demo_clip.mp4`. Replace the sample titles and artwork before using the app for public content. The entire `assets/` directory is ignored by Git, so local media stays on your machine.
-
-## Run
-
-```sh
-flutter pub get
-flutter analyze
-flutter test
-flutter build apk --debug
-```
-
-Open the project in Android Studio to run on your own Android device. Android picture in picture and real device playback still need manual verification. No store purchase or publishing flow is part of this version.
+现阶段的剧目与剧集是演示数据，多部剧暂时复用同一段测试视频；演示图片和视频未纳入公开仓库。项目尚无真实内容服务、支付或公开评论功能，Android 真机交互仍在逐步验收中。
