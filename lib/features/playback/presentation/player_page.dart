@@ -164,15 +164,17 @@ class _PlayerPageState extends State<PlayerPage> with WidgetsBindingObserver {
 
   Future<void> _preparePlayer(Episode episode, PlayerPort player) async {
     if (player is! VideoPlayerPort) return;
-    final index = _session.currentIndex;
-    final drama = _queue.entryAt(index).drama;
+    final drama = _queue.entries
+        .firstWhere((e) => e.episode.id == episode.id)
+        .drama;
     try {
+      await _pendingWrite;
       final saved = await _history.positionFor(
         demoProfileId,
         drama.id,
         episode.id,
       );
-      if (saved != null && _session.active == player) {
+      if (saved != null) {
         await player.controller.seekTo(
           clampResumePosition(saved, player.controller.value.duration),
         );
@@ -180,6 +182,13 @@ class _PlayerPageState extends State<PlayerPage> with WidgetsBindingObserver {
     } catch (_) {
       // A local preference failure does not prevent playback.
     }
+  }
+
+  Future<void> _activatePlayer(Episode episode, PlayerPort player) async {
+    if (player is! VideoPlayerPort) return;
+    final index = _session.currentIndex;
+    final drama = _queue.entryAt(index).drama;
+    await player.controller.setVolume(_muted ? 0 : 1);
     if (_session.active != player) return;
     _trackedPlayer = player;
     _trackedEpisode = episode;
@@ -264,14 +273,18 @@ class _PlayerPageState extends State<PlayerPage> with WidgetsBindingObserver {
 
   Future<void> _selectEpisode(int index) async {
     final request = ++_pageRequest;
-    _session.setRouteVisible(false);
     _cancelScrub();
-    await _saveCurrentProgress();
+    // Capture the old position synchronously, persist without blocking a swipe.
+    unawaited(_saveCurrentProgress());
     if (request != _pageRequest || !mounted) return;
-    await _session.select(index);
-    if (request == _pageRequest && mounted) {
-      _session.setRouteVisible(widget.active && _visibleIndices.isNotEmpty);
-    }
+    await _session.select(index, preloadIndex: _nextVisibleIndex(index));
+  }
+
+  int? _nextVisibleIndex(int index) {
+    final position = _visibleIndices.indexOf(index);
+    return position >= 0 && position + 1 < _visibleIndices.length
+        ? _visibleIndices[position + 1]
+        : null;
   }
 
   void _shiftCategory(int offset) {
@@ -305,9 +318,10 @@ class _PlayerPageState extends State<PlayerPage> with WidgetsBindingObserver {
 
     if (indices.isEmpty) return;
     widget.onDramaChanged?.call(_queue.entryAt(indices.first).drama);
-    if (_session.currentIndex != indices.first) {
-      await _session.select(indices.first);
-    }
+    await _session.select(
+      indices.first,
+      preloadIndex: _nextVisibleIndex(indices.first),
+    );
     if (mounted && request == _categoryRequest) {
       if (_stoppedAtFeedEnd) {
         _stoppedAtFeedEnd = false;
@@ -370,9 +384,11 @@ class _PlayerPageState extends State<PlayerPage> with WidgetsBindingObserver {
     _pages = PageController(initialPage: widget.initialIndex);
     _session = PlaybackSession(
       episodes: [for (final entry in _queue.entries) entry.episode],
-      factory: VideoPlayerPort.new,
+      factory: context.read<PlayerFactory>(),
       canPlay: (episode) => episode.isFree,
       prepare: _preparePlayer,
+      activate: _activatePlayer,
+      coordinator: context.read<PlaybackCoordinator>(),
     );
     if (!widget.active || _visibleIndices.isEmpty) {
       _session.setRouteVisible(false);
@@ -654,6 +670,7 @@ class _PlayerPageState extends State<PlayerPage> with WidgetsBindingObserver {
               key: ValueKey(category),
               controller: pages,
               scrollDirection: Axis.vertical,
+              allowImplicitScrolling: true,
               itemCount: indices.length,
               onPageChanged: (position) {
                 if (category != _category) return;
@@ -734,7 +751,10 @@ class _PlayerPageState extends State<PlayerPage> with WidgetsBindingObserver {
     final drama = entry.drama;
     final episode = entry.episode;
     final selected = index == _session.currentIndex;
-    final port = selected ? _session.active : null;
+    // Selection changes before the prepared slot is promoted. Use its controller
+    // throughout the handoff instead of briefly falling back to a placeholder.
+    final port =
+        (selected ? _session.active : null) ?? _session.preparedPlayerAt(index);
     final videoPort = port is VideoPlayerPort ? port : null;
     final ready = videoPort?.controller.value.isInitialized ?? false;
     Widget? video;
@@ -746,7 +766,10 @@ class _PlayerPageState extends State<PlayerPage> with WidgetsBindingObserver {
           child: SizedBox(
             width: videoPort!.controller.value.size.width,
             height: videoPort.controller.value.size.height,
-            child: VideoPlayer(videoPort.controller),
+            child: VideoPlayer(
+              videoPort.controller,
+              key: ValueKey(videoPort.controller),
+            ),
           ),
         ),
       );
@@ -762,16 +785,14 @@ class _PlayerPageState extends State<PlayerPage> with WidgetsBindingObserver {
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (_immersive)
-          const ColoredBox(color: Colors.black)
-        else if (widget.homeMode && !ready)
+        if (widget.homeMode && !ready && !_immersive)
           CategorySwipeRegion(
             key: selected ? const Key('home-video-swipe') : null,
             onShift: _shiftCategory,
-            child: Image.asset(drama.posterAsset, fit: BoxFit.cover),
+            child: const ColoredBox(color: Colors.black),
           )
         else
-          Image.asset(drama.posterAsset, fit: BoxFit.cover),
+          const ColoredBox(color: Colors.black),
         ?video,
         if (!_immersive)
           const IgnorePointer(
@@ -914,7 +935,7 @@ class _PlayerPageState extends State<PlayerPage> with WidgetsBindingObserver {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: FilledButton(
-                        onPressed: () => unawaited(_session.select(index)),
+                        onPressed: () => unawaited(_selectEpisode(index)),
                         child: Text('${l10n.playbackError}  ${l10n.retry}'),
                       ),
                     ),

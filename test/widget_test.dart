@@ -6,11 +6,40 @@ import 'package:luma_drama/features/playback/presentation/player_page.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
+import 'support/widget_player.dart';
+
 void main() {
   setUp(() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
   });
+
+  testWidgets(
+    'home swipe promotes next without recreating it or showing loading',
+    (tester) async {
+      final created = <String>[];
+      await tester.pumpWidget(
+        LumaDramaApp(
+          playerFactory: (episode) {
+            created.add(episode.id);
+            return WidgetPlayer();
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(created, hasLength(2));
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      await tester.drag(find.byType(PageView), const Offset(0, -550));
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      await tester.pumpAndSettle();
+      expect(find.text('City Lights & Velvet Nights'), findsOneWidget);
+      expect(created, hasLength(3));
+      expect(created.toSet(), hasLength(3));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+  );
 
   testWidgets('immersive home opens the series detail', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -18,7 +47,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const LumaDramaApp());
+    await tester.pumpWidget(
+      const LumaDramaApp(playerFactory: createWidgetPlayer),
+    );
     await tester.pumpAndSettle();
     expect(find.text('The Signal'), findsOneWidget);
     expect(find.byType(Slider), findsOneWidget);
@@ -43,7 +74,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const LumaDramaApp());
+    await tester.pumpWidget(
+      const LumaDramaApp(playerFactory: createWidgetPlayer),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Watch in landscape'));
     await tester.pumpAndSettle();
@@ -63,7 +96,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const LumaDramaApp());
+    await tester.pumpWidget(
+      const LumaDramaApp(playerFactory: createWidgetPlayer),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Open quick menu'));
     await tester.pumpAndSettle();
@@ -104,7 +139,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const LumaDramaApp());
+    await tester.pumpWidget(
+      const LumaDramaApp(playerFactory: createWidgetPlayer),
+    );
     await tester.pumpAndSettle();
     expect(find.byTooltip('Captions'), findsNothing);
     await tester.tap(find.byTooltip('My'));
@@ -142,7 +179,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const LumaDramaApp());
+    await tester.pumpWidget(
+      const LumaDramaApp(playerFactory: createWidgetPlayer),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Recommended'), findsOneWidget);
     await tester.drag(find.byType(PageView), const Offset(0, -500));
@@ -164,7 +203,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const LumaDramaApp());
+    await tester.pumpWidget(
+      const LumaDramaApp(playerFactory: createWidgetPlayer),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('My'));
     await tester.pumpAndSettle();
@@ -184,7 +225,9 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(const LumaDramaApp());
+      await tester.pumpWidget(
+        const LumaDramaApp(playerFactory: createWidgetPlayer),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('Discover'));
       await tester.pumpAndSettle();
@@ -220,7 +263,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const LumaDramaApp());
+    await tester.pumpWidget(
+      const LumaDramaApp(playerFactory: createWidgetPlayer),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Discover'));
     await tester.pumpAndSettle();
@@ -271,7 +316,9 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(const LumaDramaApp());
+      await tester.pumpWidget(
+        const LumaDramaApp(playerFactory: createWidgetPlayer),
+      );
       await tester.pumpAndSettle();
       expect(find.text('The Signal'), findsOneWidget);
 
@@ -301,7 +348,9 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const LumaDramaApp());
+    await tester.pumpWidget(
+      const LumaDramaApp(playerFactory: createWidgetPlayer),
+    );
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.tune_rounded), findsNothing);
     expect(find.text('The Signal'), findsOneWidget);
@@ -362,7 +411,9 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(const LumaDramaApp());
+    await tester.pumpWidget(
+      const LumaDramaApp(playerFactory: createWidgetPlayer),
+    );
     await tester.pumpAndSettle();
     final keys = [
       const Key('rail-save'),
@@ -401,7 +452,9 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(const LumaDramaApp());
+      await tester.pumpWidget(
+        const LumaDramaApp(playerFactory: createWidgetPlayer),
+      );
       await tester.pumpAndSettle();
 
       for (var i = 0; i < 3; i++) {
@@ -436,7 +489,9 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const LumaDramaApp());
+    await tester.pumpWidget(
+      const LumaDramaApp(playerFactory: createWidgetPlayer),
+    );
     await tester.pumpAndSettle();
 
     await tester.binding.handlePopRoute();
@@ -461,7 +516,9 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const LumaDramaApp());
+    await tester.pumpWidget(
+      const LumaDramaApp(playerFactory: createWidgetPlayer),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('rail-save')));

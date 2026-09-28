@@ -6,16 +6,22 @@ import '../features/catalog/presentation/catalog_controller.dart';
 import '../features/catalog/presentation/home_page.dart';
 import '../features/engagement/application/engagement_controller.dart';
 import '../features/engagement/data/engagement_repository.dart';
+import '../features/playback/application/playback_session.dart';
+import '../features/playback/data/video_player_port.dart';
 import '../l10n/app_localizations.dart';
 import 'locale_controller.dart';
 
 class LumaDramaApp extends StatelessWidget {
-  const LumaDramaApp({super.key});
+  const LumaDramaApp({super.key, this.playerFactory = VideoPlayerPort.new});
+
+  final PlayerFactory playerFactory;
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        Provider(create: (_) => PlaybackCoordinator()),
+        Provider<PlayerFactory>(create: (_) => playerFactory),
         ChangeNotifierProvider(
           create: (_) => CatalogController(DemoCatalogRepository())..load(),
         ),
