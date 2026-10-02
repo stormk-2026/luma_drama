@@ -1,5 +1,7 @@
 # LumaDrama
 
+**简体中文** | [English](README.en.md)
+
 LumaDrama 是一个使用 Flutter 开发的短剧播放 App 原型，面向海外用户，重点探索沉浸式刷剧、找剧和连续观看的移动端体验。目前作为个人作品展示，采用免费演示内容。
 
 ## 主要功能
